@@ -282,9 +282,7 @@ export default {
       currentPage: 1,
       getMoreCategoryProducts: [],
       browserWidth: 0,
-      isFilterSidebarOpen: false,
-      unsubscribeFromStoreAction: null,
-      aggregations: null
+      isFilterSidebarOpen: false
     };
   },
   computed: {
@@ -296,6 +294,7 @@ export default {
       getAvailableFilters: 'category-next/getAvailableFilters',
       getCurrentFilters: 'category-next/getCurrentFilters',
       getSystemFilterNames: 'category-next/getSystemFilterNames',
+      getAggregations: 'category-next/getAggregations',
       getCategories: 'category/getCategories',
       getBreadcrumbsRoutes: 'breadcrumbs/getBreadcrumbsRoutes',
       getBreadcrumbsCurrent: 'breadcrumbs/getBreadcrumbsCurrent'
@@ -389,7 +388,7 @@ export default {
         .reduce((result, [filterType, filters]) => {
           result[`${filterType}_filter`] = filters.map(filter => ({
             ...filter,
-            count: this.getFilterCount(filter) || '',
+            count: this.getFilterCount(filter) || '0',
             color:
               filterType === 'color'
                 ? (config.products.colorMappings &&
@@ -457,17 +456,11 @@ export default {
     }
   },
   mounted () {
-    this.unsubscribeFromStoreAction = this.$store.subscribeAction(action => {
-      if (action.type === 'category-next/loadAvailableFiltersFrom') {
-        this.aggregations = action.payload.aggregations;
-      }
-    });
     this.$bus.$on('product-after-list', this.initPagination);
     window.addEventListener('resize', this.getBrowserWidth);
     this.getBrowserWidth();
   },
   beforeDestroy () {
-    this.unsubscribeFromStoreAction();
     this.$bus.$off('product-after-list', this.initPagination);
     window.removeEventListener('resize', this.getBrowserWidth);
   },
@@ -547,9 +540,10 @@ export default {
       return aggregations
         .reduce((result, aggregation) => {
           const bucket =
-            this.aggregations &&
-            this.aggregations[aggregation] &&
-            this.aggregations[aggregation].buckets.find(
+            this.getAggregations &&
+            this.getAggregations[aggregation] &&
+            Array.isArray(this.getAggregations[aggregation].buckets) &&
+            this.getAggregations[aggregation].buckets.find(
               bucket => String(bucket.key) === String(filter.id)
             );
 
